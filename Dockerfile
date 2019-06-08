@@ -1,18 +1,18 @@
-﻿FROM microsoft/dotnet:2.2-sdk AS build
+﻿FROM microsoft/dotnet:3.0-sdk AS build
 
 WORKDIR /app
 
 # copy csproj and restore as distinct layers
 COPY *.csproj ./
 
-RUN dotnet restore
+RUN dotnet restore --runtime linux-x64
 
 # copy everything else (just cs?) and build app
 COPY *.cs ./
 
-RUN dotnet publish -c Release -o out
+RUN dotnet publish -c Release -r linux-x64 -o out
 
-FROM microsoft/dotnet:2.2-runtime-alpine AS runtime
+FROM microsoft/dotnet:3.0-runtime-alpine AS runtime
 
 # Metadata indicating an image maintainer.
 MAINTAINER pmiller@microsoft.com 

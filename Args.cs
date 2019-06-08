@@ -5,7 +5,7 @@ namespace DropDownloadCore
 {
     public class Args
     {
-        private const string RelavePathEnvironmentVariable = "relativepath";
+        private const string RelativePathEnvironmentVariable = "relativepath";
         private const string VSTSPatEnvironmentVariable = "vstspat";
         private const string DropDestinationEnvironmentVariable = "dropdestination";
         private const string DefaultDropDestination = "/drop";
@@ -23,8 +23,7 @@ namespace DropDownloadCore
         public string DropUrl { get; set; } = Environment.GetEnvironmentVariable(DropUrlEnvironmentVariable);
 
         [Option('p', "RelativePath")]
-        public string RelativePath { get; set; } = Environment.GetEnvironmentVariable(RelavePathEnvironmentVariable) 
-                                                   ?? "/";
+        public string RelativePath { get; set; } = Environment.GetEnvironmentVariable(RelativePathEnvironmentVariable) ?? "/";
         
         [Option]
         public int BlobTimeoutSeconds { get; set; } = int.Parse(Environment.GetEnvironmentVariable("BlobTimeoutSeconds") ?? "15");
@@ -40,7 +39,7 @@ namespace DropDownloadCore
         {
             if (string.IsNullOrWhiteSpace(this.VstsPat) || this.VstsPat.Equals("$(System.AccessToken)"))
             {
-                throw new ArgumentException("Invalid personal accestoken. Remember to set allow scripts to access oauth token in agent phase");
+                throw new ArgumentException($"Invalid personal acces token: '{this.VstsPat}'");
             }
             
             if (this.BlobTimeoutSeconds < 0 || this.BlobTimeoutSeconds > 3600) 

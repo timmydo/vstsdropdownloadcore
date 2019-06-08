@@ -40,14 +40,10 @@ namespace DropDownloadCore
         /// <param name="blobAPIVersion">The API version to use for the blob API.</param>
         /// <param name="relativeRoot">The root path relative to the drop to retrieve.</param>
         /// <returns>The manifest details.</returns>         
-        public async Task<ISet<VstsFile>> GetVstsManifest(Uri manifestUri, string blobAPIVersion, 
+        public async Task<IList<VstsFile>> GetVstsManifest(Uri manifestUri, string blobAPIVersion, 
                                                                  string relativeRoot)
         {
-            // dotnet core doesn't currently handle vsts redirects well. Poking both teams about it
-            // for now disable redirects.
-
-            var clientHandler = new HttpClientHandler() { AllowAutoRedirect = false };
-            using (var client = new HttpClient(clientHandler))
+            using (var client = new HttpClient())
             {
                 var base64EncodedString = Convert.ToBase64String(Encoding.UTF8.GetBytes("vstsdockerbuild:" + _pat));
                 
@@ -101,7 +97,7 @@ namespace DropDownloadCore
                 {
                     file.Blob.Url = urlDictionary[file.Blob.Id];
                 }
-                return new HashSet<VstsFile>(manifest);
+                return manifest;
             }
         }   
 
