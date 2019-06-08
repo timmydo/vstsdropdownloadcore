@@ -11,5 +11,5 @@ RUN dotnet publish -c Release -r linux-x64 -o out
 
 FROM microsoft/dotnet:3.0-runtime-deps AS runtime
 MAINTAINER timmydo@microsoft.com 
-COPY --from=build /app/out/dropdownloadcore /drop
-ENTRYPOINT ["/drop"]
+COPY --from=build /app/out/dropdownloadcore /dropdownloader
+ENTRYPOINT ["/dropdownloader"]
