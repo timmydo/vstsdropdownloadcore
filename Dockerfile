@@ -7,9 +7,10 @@ WORKDIR /app
 COPY *.csproj ./
 RUN dotnet restore --runtime linux-x64
 COPY *.cs ./
-RUN dotnet publish -c Release -r linux-x64 -o out
+RUN dotnet publish -c Release -r linux-x64 --self-contained -o out
 
 FROM microsoft/dotnet:3.0-runtime-deps AS runtime
 MAINTAINER timmydo@microsoft.com 
-COPY --from=build /app/out/dropdownloadcore /dropdownloader
-ENTRYPOINT ["/dropdownloader"]
+WORKDIR /app
+COPY --from=build /app/out .
+ENTRYPOINT ["./dropdownloadcore"]

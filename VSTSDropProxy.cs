@@ -105,7 +105,10 @@ namespace DropDownloadCore
                     (e, t) =>
                     {
                         Console.WriteLine($"Exception {e} on {sasurl} -> {localpath}");
-                        File.Delete(localpath);
+                        if (File.Exists(localpath))
+                        {
+                            File.Delete(localpath);
+                        }
                     })
                 .ExecuteAsync(async () =>
                 {
@@ -152,6 +155,7 @@ namespace DropDownloadCore
             var relativepath = f.Path.Substring(_relativeroot.Length);
             var localPath = Path.Combine(localDestination, relativepath).Replace('\\', Path.DirectorySeparatorChar);
             var sw = Stopwatch.StartNew();
+            EnsureDirectory(localPath);
             await Download(f.Blob.Url, localPath);
             sw.Stop();
             var downloadTimeMilliseconds = sw.Elapsed.TotalMilliseconds;
@@ -162,11 +166,17 @@ namespace DropDownloadCore
             {
                 var otherrelativepath = other.Path.Substring(_relativeroot.Length);
                 var otherpath = Path.Combine(localDestination, otherrelativepath).Replace('\\', Path.DirectorySeparatorChar);
+                EnsureDirectory(otherpath);
                 File.Copy(localPath, otherpath);
             }
 
             copytimes.Add(sw.Elapsed.TotalSeconds);
             Console.WriteLine($"Downloaded {f.Blob.Url} in {downloadTimeMilliseconds} ms");
+        }
+
+        private void EnsureDirectory(string path)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
         }
     }
 
