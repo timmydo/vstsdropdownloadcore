@@ -171,7 +171,7 @@ namespace DropDownloadCore
             }
 
             copytimes.Add(sw.Elapsed.TotalSeconds);
-            Console.WriteLine($"Downloaded {f.Blob.Url} in {downloadTimeMilliseconds} ms");
+            Console.WriteLine($"Downloaded {f.Blob.Id} in {downloadTimeMilliseconds} ms");
         }
 
         private void EnsureDirectory(string path)
