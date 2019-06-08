@@ -108,7 +108,6 @@ namespace DropDownloadCore
             /// </summary>
             
             public IEnumerable<VstsBlob> Blobs { get; set; }
-            
         }
     }
 }
