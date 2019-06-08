@@ -97,7 +97,7 @@ namespace DropDownloadCore
                 .Or<SocketException>()
                 .Or<IOException>()
                 .Or<TaskCanceledException>()
-                .WaitAndRetryAsync(10, 
+                .WaitAndRetryAsync(10,
                     retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     (e,t) => 
                     {
