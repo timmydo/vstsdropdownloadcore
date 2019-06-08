@@ -1,4 +1,4 @@
-﻿FROM microsoft/dotnet:2.0-sdk AS build
+﻿FROM microsoft/dotnet:2.2-sdk AS build
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY *.cs ./
 
 RUN dotnet publish -c Release -o out
 
-FROM microsoft/dotnet:2.1-runtime-alpine AS runtime
+FROM microsoft/dotnet:2.2-runtime-alpine AS runtime
 
 # Metadata indicating an image maintainer.
 MAINTAINER pmiller@microsoft.com 

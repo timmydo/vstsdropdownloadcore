@@ -1,19 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 using System.Web;
 
 using Polly;
+using System.Net.Sockets;
 
 namespace DropDownloadCore
 {
@@ -97,9 +94,10 @@ namespace DropDownloadCore
         {
             await Policy
                 .Handle<HttpRequestException>()
+                .Or<SocketException>()
                 .Or<IOException>()
                 .Or<TaskCanceledException>()
-                .WaitAndRetryAsync(5, 
+                .WaitAndRetryAsync(10, 
                     retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     (e,t) => 
                     {
