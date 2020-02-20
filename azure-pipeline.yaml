@@ -1,0 +1,27 @@
+# https://aka.ms/yaml
+
+name: "$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)"
+
+trigger: none
+pr: none
+
+stages:
+  - stage: stage1
+    displayName: "Build"
+    jobs:
+      - job: build
+        displayName: "build"
+        pool:
+          vmImage: 'Ubuntu-16.04'
+        steps:
+
+          - bash: |
+              dotnet restore -s nuget.config
+              dotnet pack -p:PackageVersion=$(Build.BuildNumber) --version-suffix $(Build.SourceBranchName)
+            displayName: 'build nuget'
+
+          - task: NuGetCommand@2
+            inputs:
+              command: push
+              packagesToPush: '$(Build.SourcesDirectory)/nupkg/*.nupkg'
+              publishVstsFeed: Bing

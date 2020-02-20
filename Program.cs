@@ -5,8 +5,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using CommandLine;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Extensibility;
 
 namespace DropDownloadCore
 {
@@ -23,8 +21,6 @@ namespace DropDownloadCore
 
         static int Run(Args a)
         {
-            var telemetry = new TelemetryClient(new TelemetryConfiguration(a.InstrumentationKey));
-            //https://docs.microsoft.com/en-us/dotnet/api/microsoft.applicationinsights.telemetryclient.trackevent?view=azure-dotnet
             var props  = new Dictionary<string,string>();
             var metrics = new Dictionary<string,double>();
             var sw = Stopwatch.StartNew();
@@ -34,9 +30,8 @@ namespace DropDownloadCore
                 var url = a.DropUrl ?? ExtractDropUrl(a.DropDestination);
                 props["url"] = url;
                 // sample URL:
-                // https://msasg.artifacts.visualstudio.com/DefaultCollection/_apis/drop/drops/Aether_master/7dd31c59986465bfa9af3bd883cb35ce132979a2/e90d7f94-265a-86c7-5958-66983fdcaa06
+                // https://msasg.artifacts.visualstudio.com/DefaultCollection/_apis/drop/drops/blahblah/7dd31c59986465bfa9af3bd883cb35ce132979a2/e90d7f94-265a-86c7-5958-66983fdcaa06
                 Console.WriteLine($"url: {url}");
-                // /Release/Amd64/app/aether/AetherBackend
                 Console.WriteLine($"relative path: {a.RelativePath}");
                 Console.WriteLine($"destination: {a.DropDestination}");
                 var proxy = new VSTSDropProxy(url, a.RelativePath, a.VstsPat, TimeSpan.FromSeconds(a.BlobTimeoutSeconds), a.RetryCount, a.SoftLinks, a.CacheLocation, a.ConcurrentDownloads, a.ComputeDockerHashes);
@@ -55,8 +50,6 @@ namespace DropDownloadCore
             finally
             {
                  metrics["Elapsed"] = sw.Elapsed.TotalSeconds;
-                 telemetry.TrackEvent("dropdownloader", props, metrics);
-                 telemetry.Flush();
             }
         }
 

@@ -34,7 +34,7 @@ namespace DropDownloadCore
         private readonly Uri _VSTSDropUri;
         private readonly string _relativeroot;
 
-        private readonly IList<VstsFile> _files;
+        private IList<VstsFile> _files;
 
         public VSTSDropProxy(string VSTSDropUri, string path, string pat, TimeSpan blobtimeout, int retryCount, bool useSoftLinks, string cacheLocation, int concurrentDownloads, bool computeDockerHashes)
         {
@@ -71,7 +71,21 @@ namespace DropDownloadCore
             try
             {
                 var manifesturi = Munge(_VSTSDropUri, ManifestAPIVersion);
-                _files = _dropApi.GetVstsManifest(manifesturi, BlobAPIVersion, _relativeroot).Result;
+                Policy
+                    .Handle<HttpRequestException>()
+                    .Or<SocketException>()
+                    .Or<IOException>()
+                    .Or<TaskCanceledException>()
+                    .WaitAndRetry(_retryCount,
+                        retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                        (e, t) =>
+                        {
+                            Console.WriteLine($"{DateTime.Now.ToString("o")} Transient error downloading manifest '{e}'");
+                        })
+                    .Execute(() =>
+                    {
+                        _files = _dropApi.GetVstsManifest(manifesturi, BlobAPIVersion, _relativeroot).Result;
+                    });
             }
             catch (Exception)
             {
@@ -104,30 +118,36 @@ namespace DropDownloadCore
 
         private async Task Download(string sasurl, string localpath)
         {
-            await Policy
-                .Handle<HttpRequestException>()
-                .Or<SocketException>()
-                .Or<IOException>()
-                .Or<TaskCanceledException>()
-                .WaitAndRetryAsync(_retryCount,
-                    retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                    (e, t) =>
-                    {
-                        Console.WriteLine($"Exception {e} on {sasurl} -> {localpath}");
-                        if (File.Exists(localpath))
+            try
+            {
+                await Policy
+                    .Handle<HttpRequestException>()
+                    .Or<SocketException>()
+                    .Or<IOException>()
+                    .Or<TaskCanceledException>()
+                    .WaitAndRetryAsync(_retryCount,
+                        retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                        (e, t) =>
                         {
-                            File.Delete(localpath);
-                        }
-                    })
-                .ExecuteAsync(async () =>
-                {
-                    // todo: timeout based on blob size
-                    using (var blob = await _contentClient.GetStreamAsync(sasurl))
-                    using (var fileStream = new FileStream(localpath, FileMode.CreateNew))
+                            if (File.Exists(localpath))
+                            {
+                                File.Delete(localpath);
+                            }
+                        })
+                    .ExecuteAsync(async () =>
                     {
-                        await blob.CopyToAsync(fileStream);
-                    }
-                });
+                        // todo: timeout based on blob size
+                        using (var blob = await _contentClient.GetStreamAsync(sasurl))
+                        using (var fileStream = new FileStream(localpath, FileMode.CreateNew))
+                        {
+                            await blob.CopyToAsync(fileStream);
+                        }
+                    });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Exception {e} on {sasurl} -> {localpath}");
+            }
         }
 
         // other options for perf.
@@ -230,7 +250,7 @@ namespace DropDownloadCore
                 var count = Interlocked.Increment(ref this.processedFileCount);
                 if (count % 1000 == 0)
                 {
-                    Console.WriteLine($"Processed {count} files...");
+                    Console.WriteLine($"{DateTime.Now.ToString("o")} Processed {count} files...");
                 }
             }
 
