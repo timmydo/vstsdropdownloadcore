@@ -47,7 +47,7 @@ namespace DropDownloadCore
             {
                 var base64EncodedString = Convert.ToBase64String(Encoding.UTF8.GetBytes("vstsdockerbuild:" + _pat));
                 
-                Console.WriteLine($"asking for drop manifest at {manifestUri}");
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Asking for drop manifest at {manifestUri}");
                 
                 var manifestRequest = new HttpRequestMessage(HttpMethod.Get, manifestUri);
                 manifestRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", base64EncodedString);
@@ -62,15 +62,19 @@ namespace DropDownloadCore
 
                 manifestResponse.EnsureSuccessStatusCode();
                 string manifestContent = await manifestResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Manifest (status code {manifestResponse.StatusCode}) length {manifestContent.Length}");
                 //filter here so we can be case insensitve. manifest url would take a directory but unlike root in drop.exe it is case sensitve.
                 //derserialize from stream in future to not buffer as much?
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Finding blobs that start with {relativeRoot}");
                 var manifest = JsonConvert.DeserializeObject<List<VstsFile>>(manifestContent)
-                                    .Where(f => f.Path.StartsWith(relativeRoot, StringComparison.OrdinalIgnoreCase)).ToList();
+                                    .Where(f => ShouldInclude(f.Path, relativeRoot)).ToList();
 
                 // forget what our limit was but this would be bad for a whole drop. Batch has a certain
                 // limit. Should we batch to 500 or lazily get sas urls for only certain directories
                 // (those with dockerfiles in them)
-                var uniqueBlobs = manifest.Select(file => file.Blob.Id).Distinct().Select(id => new { id =  id});
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Found {manifest.Count} blobs");
+                var uniqueBlobs = manifest.Select(file => file.Blob.Id).Distinct().Select(id => new { id =  id}).ToArray();
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Found {uniqueBlobs.Length} unique blobs");
                 var blobList = JsonConvert.SerializeObject(new { blobs = uniqueBlobs });
                 var content = new StringContent(blobList);
                 content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
@@ -81,7 +85,7 @@ namespace DropDownloadCore
                 queryParameters.Add(APIVersionParam, blobAPIVersion);
                 uriBuilder.Query = queryParameters.ToString();
                 
-                Console.WriteLine($"asking for sas tokens at {uriBuilder.Uri}");
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Asking for sas tokens at {uriBuilder.Uri}");
                 var blobRequest = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri);
                 blobRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", base64EncodedString);
                 blobRequest.Content = content;
@@ -89,6 +93,7 @@ namespace DropDownloadCore
                 response.EnsureSuccessStatusCode();
 
                 string sasUrlJson = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"{DateTime.Now.ToString("o")} SAS token Response is {response.StatusCode}, length: {sasUrlJson.Length}");
                 var blobBatch = JsonConvert.DeserializeObject<BatchBlobResponse>(sasUrlJson);
                 
                 var urlDictionary = blobBatch.Blobs.ToDictionary(b => b.Id, b => b.Url);
@@ -98,7 +103,17 @@ namespace DropDownloadCore
                 }
                 return manifest;
             }
-        }   
+        }
+
+        private static bool ShouldInclude(string fullPath, string includePattern)
+        {
+            if (fullPath.Length > 1 && fullPath[0] != '/')
+            {
+                fullPath = "/" + fullPath;
+            }
+
+            return fullPath.StartsWith(includePattern, StringComparison.OrdinalIgnoreCase);
+        }
 
         internal sealed class BatchBlobResponse
         {
