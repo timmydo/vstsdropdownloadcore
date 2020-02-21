@@ -77,9 +77,9 @@ namespace DropDownloadCore
                 }
                 dropJSONFilename = dropjsonfiles.Single();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Console.WriteLine($"Trouble finding VSTSDrop.json in {workingDirectory}");
+                Console.WriteLine($"Trouble finding VSTSDrop.json in {workingDirectory}: {e}");
                 throw;
             }
 

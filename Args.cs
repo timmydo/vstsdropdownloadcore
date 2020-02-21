@@ -39,7 +39,7 @@ namespace DropDownloadCore
         public int RetryCount { get; set; } = int.Parse(Environment.GetEnvironmentVariable("RetryCount") ?? "5");
 
         [Option('n', "ConcurrentDownloads")]
-        public int ConcurrentDownloads { get; set; } = int.Parse(Environment.GetEnvironmentVariable("ConcurrentDownloads") ?? "50");
+        public int ConcurrentDownloads { get; set; } = int.Parse(Environment.GetEnvironmentVariable("ConcurrentDownloads") ?? "10");
 
         [Option('s', "SoftLinks")]
         public bool SoftLinks { get; set; } = bool.Parse(Environment.GetEnvironmentVariable("SoftLinks") ?? "false");

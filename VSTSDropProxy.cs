@@ -129,6 +129,8 @@ namespace DropDownloadCore
                         retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                         (e, t) =>
                         {
+                            Console.WriteLine($"{DateTime.Now.ToString("o")} Retry {t} on {sasurl} -> {localpath}");
+
                             if (File.Exists(localpath))
                             {
                                 File.Delete(localpath);
