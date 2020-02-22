@@ -129,6 +129,8 @@ namespace DropDownloadCore
                         retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                         (e, t) =>
                         {
+                            Console.WriteLine($"{DateTime.Now.ToString("o")} {e.Message}: Retry in {t} on {localpath}");
+
                             if (File.Exists(localpath))
                             {
                                 File.Delete(localpath);
@@ -146,7 +148,7 @@ namespace DropDownloadCore
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{DateTime.Now.ToString("o")} Exception {e} on {sasurl} -> {localpath}");
+                Console.WriteLine($"{DateTime.Now.ToString("o")} Exception {e} on {localpath}");
             }
         }
 
@@ -158,7 +160,6 @@ namespace DropDownloadCore
         public async Task<Dictionary<string, double>> Materialize(string localDestination)
         {
             var uniqueblobs = _files.GroupBy(keySelector: file => file.Blob.Id, resultSelector: (key, file) => file).ToList();
-            Console.WriteLine($"Found {_files.Count} files, {uniqueblobs.Count} unique");
             var metrics = new Dictionary<string, double>
             {
                 ["files"] = _files.Count,
@@ -172,7 +173,8 @@ namespace DropDownloadCore
 
             var dltimes = new ConcurrentBag<double>();
             var copytimes = new ConcurrentBag<double>();
-            var throttler = new ActionBlock<IEnumerable<VstsFile>>(list => DownloadGrouping(list, localDestination, dltimes, copytimes), new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = _concurrentDownloads });
+            var filesize = new ConcurrentBag<double>();
+            var throttler = new ActionBlock<IEnumerable<VstsFile>>(list => DownloadGrouping(list, localDestination, dltimes, copytimes, filesize), new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = _concurrentDownloads });
 
             foreach (var grouping in uniqueblobs)
             {
@@ -184,17 +186,40 @@ namespace DropDownloadCore
 
             if (dltimes.Any())
             {
+                metrics["DownloadCount"] = dltimes.Count();
                 metrics["AverageDownloadSecs"] = dltimes.Average();
                 metrics["MaxDownloadSecs"] = dltimes.Max();
+                CalculatePercentile(metrics, dltimes, "Download");
             }
 
             if (copytimes.Any())
             {
+                metrics["CopyCount"] = copytimes.Count();
                 metrics["AverageCopySecs"] = copytimes.Average();
                 metrics["MaxCopySecs"] = copytimes.Max();
+                CalculatePercentile(metrics, copytimes, "CopyTime");
             }
 
             return metrics;
+        }
+        
+        private void CalculatePercentile(IDictionary<string, double> metrics, ConcurrentBag<double> values, string name)
+        {
+            var sorted = values.OrderBy(x => x).ToArray();
+            metrics[name + "P50"] = PercentileSorted(0.50, sorted);
+            metrics[name + "P90"] = PercentileSorted(0.90, sorted);
+            metrics[name + "P95"] = PercentileSorted(0.95, sorted);
+            metrics[name + "P99"] = PercentileSorted(0.99, sorted);
+        }
+
+        private double PercentileSorted(double percentile, double[] sorted)
+        {
+            if (sorted.Length < 1)
+            {
+                return -1;
+            }
+
+            return sorted[(int)((sorted.Length - 1) * percentile)];
         }
 
         private void ComputeDockerHashes(string localDestination, IDictionary<string, double> metrics)
@@ -226,7 +251,7 @@ namespace DropDownloadCore
             }
         }
 
-        private async Task DownloadGrouping(IEnumerable<VstsFile> group, string localDestination, ConcurrentBag<double> dltimes, ConcurrentBag<double> copytimes)
+        private async Task DownloadGrouping(IEnumerable<VstsFile> group, string localDestination, ConcurrentBag<double> dltimes, ConcurrentBag<double> copytimes, ConcurrentBag<double> filesizes)
         {
             var blob = group.First().Blob;
             var blobPath = Path.Combine(localDestination, _cacheLocation, blob.Id).Replace('\\', Path.DirectorySeparatorChar);
@@ -239,9 +264,11 @@ namespace DropDownloadCore
                 dltimes.Add(downloadTimer.Elapsed.TotalSeconds);
             }
 
-            var copyTimer = Stopwatch.StartNew();
+            var copyTimer = new Stopwatch();
             foreach (var other in group)
             {
+                copyTimer.Restart();
+                filesizes.Add(other.Blob.Size);
                 var otherrelativepath = other.Path.Substring(_relativeroot.Length);
                 var otherpath = Path.Combine(localDestination, otherrelativepath).Replace('\\', Path.DirectorySeparatorChar);
                 EnsureDirectory(otherpath);
@@ -252,9 +279,9 @@ namespace DropDownloadCore
                 {
                     Console.WriteLine($"{DateTime.Now.ToString("o")} Processed {count} files...");
                 }
-            }
 
-            copytimes.Add(copyTimer.Elapsed.TotalSeconds);
+                copytimes.Add(copyTimer.Elapsed.TotalSeconds);
+            }
         }
 
         private void CreateLink(string localPath, string otherpath, bool softLink)
@@ -322,5 +349,7 @@ namespace DropDownloadCore
         public string Url;
 
         public string Id;
+
+        public int Size;
     }
 }

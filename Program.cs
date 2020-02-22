@@ -50,7 +50,11 @@ namespace DropDownloadCore
             finally
             {
                  metrics["Elapsed"] = sw.Elapsed.TotalSeconds;
-            }
+                foreach (var metric in metrics)
+                {
+                    Console.WriteLine($"{metric.Key} = {metric.Value}");
+                }
+            } 
         }
 
         // agent based tasks automatically download artifacts from the build. 
@@ -77,9 +81,9 @@ namespace DropDownloadCore
                 }
                 dropJSONFilename = dropjsonfiles.Single();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Console.WriteLine($"Trouble finding VSTSDrop.json in {workingDirectory}");
+                Console.WriteLine($"Trouble finding VSTSDrop.json in {workingDirectory}: {e}");
                 throw;
             }
 

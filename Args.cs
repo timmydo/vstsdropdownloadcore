@@ -33,19 +33,16 @@ namespace DropDownloadCore
         public string RelativePath { get; set; } = Environment.GetEnvironmentVariable(RelativePathEnvironmentVariable) ?? "/";
 
         [Option]
-        public int BlobTimeoutSeconds { get; set; } = int.Parse(Environment.GetEnvironmentVariable("BlobTimeoutSeconds") ?? "15");
+        public int BlobTimeoutSeconds { get; set; } = int.Parse(Environment.GetEnvironmentVariable("BlobTimeoutSeconds") ?? "100");
 
         [Option('r', "RetryCount")]
-        public int RetryCount { get; set; } = int.Parse(Environment.GetEnvironmentVariable("RetryCount") ?? "10");
+        public int RetryCount { get; set; } = int.Parse(Environment.GetEnvironmentVariable("RetryCount") ?? "5");
 
         [Option('n', "ConcurrentDownloads")]
-        public int ConcurrentDownloads { get; set; } = int.Parse(Environment.GetEnvironmentVariable("ConcurrentDownloads") ?? "50");
+        public int ConcurrentDownloads { get; set; } = int.Parse(Environment.GetEnvironmentVariable("ConcurrentDownloads") ?? "10");
 
         [Option('s', "SoftLinks")]
         public bool SoftLinks { get; set; } = bool.Parse(Environment.GetEnvironmentVariable("SoftLinks") ?? "false");
-
-        [Option('i', "InstrumentationKey")]
-        public string InstrumentationKey { get; set; } = "5af8641f-fe42-4661-b431-849b73b55e0c";
 
         [Option('h', "ComputeDockerHashes")]
         public bool ComputeDockerHashes { get; set; } = bool.Parse(Environment.GetEnvironmentVariable("ComputeDockerHashes") ?? "false");
